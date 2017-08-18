@@ -12,7 +12,7 @@ func parseEtherFloatToWei(amount string) *big.Int {
 	parts := strings.Split(amount, ".")
 	weiStr := "0"
 	if len(parts) == 2 {
-		weiStr = PadRight(parts[1], "0", 18)
+		weiStr = padRight(parts[1], "0", 18)
 	}
 
 	var wei big.Int
@@ -31,16 +31,7 @@ func parseEtherFloatToWei(amount string) *big.Int {
 	return total
 }
 
-func round(num float64) int {
-	return int(num + math.Copysign(0.5, num))
-}
-
-func toFixed(num float64, precision int) float64 {
-	output := math.Pow(10, float64(precision))
-	return float64(round(num*output)) / output
-}
-
-func PadRight(str, pad string, length int) string {
+func padRight(str, pad string, length int) string {
 	for {
 		str += pad
 		if len(str) > length {

@@ -61,6 +61,18 @@ func Test_parseEtherFloatToWei(t *testing.T) {
 				return &ether
 			}(),
 		},
+		{
+			name: "Test5",
+			args: args{
+				amount: "999999999999999999",
+			},
+			want: func() *big.Int {
+				var ether big.Int
+				ether.SetString("999999999999999999000000000000000000", 10)
+
+				return &ether
+			}(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
