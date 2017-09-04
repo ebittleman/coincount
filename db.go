@@ -3,6 +3,7 @@ package coincount
 import (
 	"context"
 	"database/sql"
+	"math/big"
 	"time"
 )
 
@@ -17,8 +18,8 @@ CREATE TABLE account (
 CREATE TABLE gl_transaction (
 	id integer,
 	account_id integer,
-	debit real,
-	credit real,
+	debit integer,
+	credit integer,
 	memo text,
 	timestamp integer,
 	PRIMARY KEY (id, account_id),
@@ -34,9 +35,9 @@ CREATE TABLE inventory_transaction (
 	id integer PRIMARY KEY AUTOINCREMENT,
 	account_id integer,
 	item_id integer,
-	qty_in real,
-	qty_out real,
-	cost real,
+	qty_in text,
+	qty_out text,
+	cost integer,
 	memo text,
 	timestamp integer,
 	FOREIGN KEY (account_id) REFERENCES account (id),
@@ -52,7 +53,7 @@ CREATE TABLE purchase (
 	id integer PRIMARY KEY AUTOINCREMENT,
 	vendor_id integer,
 	payable_acct_id integer,
-	amount real,
+	amount integer,
 	timestamp integer,
 	FOREIGN KEY (vendor_id) REFERENCES vendor (id),
 	FOREIGN KEY (payable_acct_id) REFERENCES account (id)
@@ -62,9 +63,9 @@ CREATE TABLE purchase_item (
 	purchase_id integer,
 	item_id integer,
 	inventory_account_id integer,
-	qty real,
-	cost real,
-	amount real,
+	qty text,
+	cost integer,
+	amount integer,
 	PRIMARY KEY (purchase_id, item_id),
 	FOREIGN KEY (purchase_id) REFERENCES purchase (id),
 	FOREIGN KEY (item_id) REFERENCES item (id),
@@ -272,7 +273,7 @@ func (p PurchaseItemTable) SaveItem(
 		purchaseID,
 		item.Item.ID,
 		item.InventoryAccount.ID,
-		item.Qty,
+		item.Qty.Text(16),
 		item.Cost,
 		item.Amount,
 	)
@@ -305,6 +306,7 @@ func (p PurchaseItemTable) GetItems(ctx context.Context, db *sql.DB, purchaseID 
 	}
 
 	for rows.Next() && err == nil {
+		qty := ""
 		items = append(items, PurchaseItem{})
 		i := len(items) - 1
 		err = rows.Scan(
@@ -312,10 +314,12 @@ func (p PurchaseItemTable) GetItems(ctx context.Context, db *sql.DB, purchaseID 
 			&items[i].Item.Name,
 			&items[i].InventoryAccount.ID,
 			&items[i].InventoryAccount.Name,
-			&items[i].Qty,
+			&qty,
 			&items[i].Cost,
 			&items[i].Amount,
 		)
+		items[i].Qty = big.NewInt(0)
+		items[i].Qty.SetString(qty, 16)
 	}
 
 	rows.Close()
@@ -442,8 +446,8 @@ func (i InventoryTransactionTable) Save(ctx context.Context, transaction Invento
 		// transaction.ID, <- autoincrement
 		transaction.Account.ID,
 		transaction.Item.ID,
-		transaction.QtyIn,
-		transaction.QtyOut,
+		transaction.QtyIn.Text(16),
+		transaction.QtyOut.Text(16),
 		transaction.Cost,
 		transaction.Memo,
 		transaction.Date.UTC().Unix(),
@@ -464,6 +468,8 @@ func (i InventoryTransactionTable) Get(ctx context.Context, id int) (InventoryTr
 	var (
 		transaction InventoryTransaction
 		timestamp   int64
+		qtyIn       string
+		qtyOut      string
 		err         error
 	)
 
@@ -490,11 +496,14 @@ func (i InventoryTransactionTable) Get(ctx context.Context, id int) (InventoryTr
 		&transaction.Account.Name,
 		&transaction.Item.ID,
 		&transaction.Item.Name,
-		&transaction.QtyIn,
-		&transaction.QtyOut,
+		&qtyIn,
+		&qtyOut,
 		&transaction.Memo,
 		&timestamp,
 	)
+
+	transaction.QtyIn, _ = big.NewInt(0).SetString(qtyIn, 16)
+	transaction.QtyOut, _ = big.NewInt(0).SetString(qtyIn, 16)
 
 	transaction.Date = time.Unix(timestamp, 0).UTC()
 

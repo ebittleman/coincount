@@ -3,6 +3,7 @@ package coincount
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
 )
 
@@ -16,8 +17,8 @@ type (
 		ID      int
 		Date    time.Time
 		Account Account
-		Debit   float64
-		Credit  float64
+		Debit   int64
+		Credit  int64
 		Memo    string
 	}
 
@@ -31,10 +32,10 @@ type (
 		Date    time.Time
 		Account Account
 		Item    Item
-		QtyIn   float64
-		QtyOut  float64
-		Cost    float64
-		Amount  float64
+		QtyIn   *big.Int
+		QtyOut  *big.Int
+		Cost    int64
+		Amount  int64
 		Memo    string
 	}
 
@@ -46,9 +47,9 @@ type (
 	PurchaseItem struct {
 		Item             Item
 		InventoryAccount Account
-		Qty              float64
-		Cost             float64
-		Amount           float64
+		Qty              *big.Int
+		Cost             int64
+		Amount           int64
 	}
 
 	Purchase struct {
@@ -56,24 +57,26 @@ type (
 		Date           time.Time
 		Vendor         Vendor
 		PayableAccount Account
-		Amount         float64
+		Amount         int64
 		Items          []PurchaseItem
 	}
 )
 
-func MiningPayout(date time.Time, qty float64, costOfElecricity float64) Purchase {
+func MiningPayout(date time.Time, qty *big.Int, costOfElecricity int64) Purchase {
+	amt := multiplyRoundUp(qty, costOfElecricity)
+
 	return Purchase{
 		Date:           date,
 		Vendor:         ElectricCompany,
 		PayableAccount: ElectricBill,
-		Amount:         qty * costOfElecricity,
+		Amount:         amt,
 		Items: []PurchaseItem{
 			{
 				Item:             Ether,
 				InventoryAccount: EthMain,
 				Qty:              qty,
 				Cost:             costOfElecricity,
-				Amount:           qty * costOfElecricity,
+				Amount:           amt,
 			},
 		},
 	}
@@ -84,17 +87,17 @@ func PostPurchase(date time.Time, purchase Purchase, nextGLTransaction int) ([]I
 		inventoryTransactions []InventoryTransaction
 		glTransactions        []GLTransaction
 	)
-
+	zero := big.NewInt(0)
 	memo := fmt.Sprintf("PUR-%d", purchase.ID)
 	for _, item := range purchase.Items {
 		if item.Item.ID <= 0 {
 			continue
 		}
 
-		qtyIn, qtyOut := item.Qty, 0.0
-		if qtyIn < 0 {
-			qtyOut = -1 * qtyIn
-			qtyIn = 0
+		qtyIn, qtyOut := item.Qty, big.NewInt(0)
+		if qtyIn.Cmp(zero) < 0 {
+			qtyOut.Neg(qtyIn)
+			qtyIn = zero
 		}
 
 		inventoryTransactions = append(inventoryTransactions, InventoryTransaction{
@@ -107,7 +110,7 @@ func PostPurchase(date time.Time, purchase Purchase, nextGLTransaction int) ([]I
 			Memo:    memo,
 		})
 
-		debitAmount, creditAmount := item.Amount, 0.0
+		debitAmount, creditAmount := item.Amount, int64(0)
 		if debitAmount < 0 {
 			creditAmount = -1 * debitAmount
 			debitAmount = 0
@@ -123,7 +126,7 @@ func PostPurchase(date time.Time, purchase Purchase, nextGLTransaction int) ([]I
 		})
 	}
 
-	debitAmount, creditAmount := 0.0, purchase.Amount
+	debitAmount, creditAmount := int64(0), purchase.Amount
 	if creditAmount < 0 {
 		debitAmount = -1 * creditAmount
 		creditAmount = 0
@@ -141,85 +144,87 @@ func PostPurchase(date time.Time, purchase Purchase, nextGLTransaction int) ([]I
 	return inventoryTransactions, glTransactions
 }
 
-// TODO: continue here.
-func PurchaseAssetWithEth(
-	date time.Time,
-	vendor Vendor,
-	assetAccount Account,
-	ethAccount Account,
-	qty float64,
-	fee float64,
-	costOfEth float64,
-) Purchase {
-	return Purchase{
-		Date:           date,
-		Vendor:         vendor,
-		PayableAccount: ethAccount,
-		Amount:         costOfEth * (qty + fee),
-		Items: []PurchaseItem{
-			{
-				InventoryAccount: EthTXFee,
-				Qty:              fee,
-				Cost:             costOfEth,
-				Amount:           fee * costOfEth,
-			},
-			{
-				InventoryAccount: assetAccount,
-				Qty:              1,
-				Cost:             costOfEth * qty,
-				Amount:           costOfEth * qty,
-			},
-		},
-	}
-}
+// // TODO: continue here.
+// func PurchaseAssetWithEth(
+// 	date time.Time,
+// 	vendor Vendor,
+// 	assetAccount Account,
+// 	ethAccount Account,
+// 	qty *big.Int,
+// 	fee *big.Int,
+// 	costOfEth int64,
+// ) Purchase {
+// 	return Purchase{
+// 		Date:           date,
+// 		Vendor:         vendor,
+// 		PayableAccount: ethAccount,
+// 		Amount:         costOfEth * (qty + fee),
+// 		Items: []PurchaseItem{
+// 			{
+// 				InventoryAccount: EthTXFee,
+// 				Qty:              fee,
+// 				Cost:             costOfEth,
+// 				Amount:           fee * costOfEth,
+// 			},
+// 			{
+// 				InventoryAccount: assetAccount,
+// 				Qty:              1,
+// 				Cost:             costOfEth * qty,
+// 				Amount:           costOfEth * qty,
+// 			},
+// 		},
+// 	}
+// }
 
-func CalcCost(transactions []InventoryTransaction, qty float64) (cost float64, err error) {
-	if qty == 0 {
+func CalcCost(transactions []InventoryTransaction, qty *big.Int) (cost int64, err error) {
+	var zero big.Int
+	if qty.Cmp(&zero) == 0 {
 		return 0, nil
 	}
 
 	inQueue, outQueue := make(TransactionQueue, 0), make(TransactionQueue, 0)
 	for _, transaction := range transactions {
-		if transaction.QtyIn > 0 {
+		if transaction.QtyIn.Cmp(&zero) > 0 {
 			inQueue.Enqueue(transaction)
-		} else if transaction.QtyOut > 0 {
+		} else if transaction.QtyOut.Cmp(&zero) > 0 {
 			outQueue.Enqueue(transaction)
 		}
 	}
 
-	var inQty, outQty, price float64
+	inQty, outQty := big.NewInt(0), big.NewInt(0)
+	var price int64
 	var currentIn, currentOut InventoryTransaction
 	for {
-		if inQty == 0 {
+		if inQty.Cmp(&zero) == 0 {
 			currentIn, err = inQueue.Dequeue()
 			if err != nil {
-				return 0.0, errors.New("Out of Inventory")
+				return 0, errors.New("Out of Inventory")
 			}
-			inQty = currentIn.QtyIn
+			inQty.Set(currentIn.QtyIn)
 		}
 
-		if outQty == 0 {
+		if outQty.Cmp(&zero) == 0 {
 			price = 0
 			currentOut, err = outQueue.Peek()
 			if err != nil {
-				outQty = qty
+				outQty.Set(qty)
 			} else {
-				outQty = currentOut.QtyOut
+				outQty.Set(currentOut.QtyOut)
 			}
 		}
 
-		if outQty <= inQty {
-			inQty -= outQty
-			price += (outQty * currentIn.Cost)
-			outQty = 0
+		if outQty.Cmp(inQty) <= 0 {
+			inQty.Sub(inQty, outQty)
+			price += multiplyRoundUp(outQty, currentIn.Cost)
+			outQty.Set(&zero)
 			_, err = outQueue.Dequeue()
 			if err != nil {
-				return price / qty, nil
+				return divideRound(price, qty), nil
 			}
 		} else {
-			outQty -= inQty
-			price += (inQty * currentIn.Cost)
-			inQty = 0
+			outQty.Sub(outQty, inQty)
+			price += multiplyRoundUp(inQty, currentIn.Cost)
+			inQty.Set(&zero)
 		}
 	}
 }

@@ -1,16 +1,21 @@
 package coincount
 
-import "testing"
+import (
+	"math/big"
+	"testing"
+	"time"
+)
 
 func TestCalcCost(t *testing.T) {
+	var zero big.Int
 	type args struct {
 		transactions []InventoryTransaction
-		qty          float64
+		qty          *big.Int
 	}
 	tests := []struct {
 		name     string
 		args     args
-		wantCost float64
+		wantCost int64
 		wantErr  bool
 	}{
 		{
@@ -18,44 +23,51 @@ func TestCalcCost(t *testing.T) {
 			args: args{
 				transactions: []InventoryTransaction{
 					{
-						ID:    1,
-						QtyIn: .2,
-						Cost:  3.5,
+						ID:     1,
+						QtyIn:  parseEtherFloatToWei(".2"),
+						QtyOut: &zero,
+						Cost:   350,
 					},
 					{
 						ID:     2,
-						QtyOut: .1,
-						Cost:   3.5,
+						QtyIn:  &zero,
+						QtyOut: parseEtherFloatToWei(".1"),
+						Cost:   350,
 					},
 					{
-						ID:    3,
-						QtyIn: .1,
-						Cost:  3.0,
+						ID:     3,
+						QtyIn:  parseEtherFloatToWei(".1"),
+						QtyOut: &zero,
+						Cost:   300,
 					},
 					{
-						ID:    4,
-						QtyIn: 1,
-						Cost:  2.7,
+						ID:     4,
+						QtyIn:  parseEtherFloatToWei("1"),
+						QtyOut: &zero,
+						Cost:   270,
 					},
 					{
 						ID:     5,
-						QtyOut: .3,
-						Cost:   3.0666666666666673,
+						QtyIn:  &zero,
+						QtyOut: parseEtherFloatToWei(".3"),
+						Cost:   307,
 					},
 					{
-						ID:    6,
-						QtyIn: .5,
-						Cost:  3.9,
+						ID:     6,
+						QtyIn:  parseEtherFloatToWei(".5"),
+						QtyOut: &zero,
+						Cost:   390,
 					},
 					{
-						ID:    7,
-						QtyIn: 6,
-						Cost:  1,
+						ID:     7,
+						QtyIn:  parseEtherFloatToWei("6"),
+						QtyOut: &zero,
+						Cost:   1,
 					},
 				},
-				qty: 2.1,
+				qty: parseEtherFloatToWei("2.1"),
 			},
-			wantCost: 2.1,
+			wantCost: 210,
 		},
 	}
 	for _, tt := range tests {
@@ -70,4 +82,11 @@ func TestCalcCost(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAmountCalc(t *testing.T) {
+	qty := parseEtherFloatToWei("0.01")
+	costOfElectricity := int64(20015)
+	p := MiningPayout(time.Unix(123456789, 0), qty, costOfElectricity)
+	t.Log(p.Amount)
 }

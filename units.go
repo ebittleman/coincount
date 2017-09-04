@@ -39,3 +39,55 @@ func padRight(str, pad string, length int) string {
 		}
 	}
 }
+
+func multiplyRoundUp(wei *big.Int, costInCents int64) int64 {
+	var remainder big.Int
+	centPrecision := big.NewInt(1000)
+
+	amount := big.NewInt(costInCents)
+	amount.Mul(amount, centPrecision).
+		Mul(amount, wei).
+		Div(amount, big.NewInt(weiPerEth))
+	remainder.Mod(amount, centPrecision)
+
+	amt := amount.Div(amount, centPrecision).Int64()
+	if remainder.Int64() > 1 {
+		amt++
+	}
+
+	return amt
+}
+
+func multiplyTruncate(wei *big.Int, costInCents int64) int64 {
+	amount := big.NewInt(costInCents)
+	amount.Mul(amount, wei).
+		Div(amount, big.NewInt(weiPerEth))
+
+	return amount.Int64()
+}
+
+func divideRound(costInCents int64, wei *big.Int) int64 {
+	var remainder big.Int
+	centPrecision := big.NewInt(1000)
+
+	amount := big.NewInt(costInCents)
+	amount.Mul(amount, centPrecision).
+		Mul(amount, big.NewInt(weiPerEth)).
+		Div(amount, wei)
+	remainder.Mod(amount, centPrecision)
+
+	amt := amount.Div(amount, centPrecision).Int64()
+	if remainder.Int64() > 1 {
+		amt++
+	}
+
+	return amt
+}
+
+func divideTruncate(costInCents int64, wei *big.Int) int64 {
+	amount := big.NewInt(costInCents)
+	amount.Mul(amount, big.NewInt(weiPerEth)).
+		Div(amount, wei)
+
+	return amount.Int64()
+}
