@@ -86,18 +86,20 @@ func PostPurchase(date time.Time, purchase Purchase, nextGLTransaction int) ([]I
 	var (
 		inventoryTransactions []InventoryTransaction
 		glTransactions        []GLTransaction
+		zero                  big.Int
 	)
-	zero := big.NewInt(0)
+
 	memo := fmt.Sprintf("PUR-%d", purchase.ID)
 	for _, item := range purchase.Items {
 		if item.Item.ID <= 0 {
 			continue
 		}
 
-		qtyIn, qtyOut := item.Qty, big.NewInt(0)
-		if qtyIn.Cmp(zero) < 0 {
+		qtyIn, qtyOut := new(big.Int).Set(item.Qty), new(big.Int).Set(&zero)
+
+		if qtyIn.Cmp(&zero) < 0 {
 			qtyOut.Neg(qtyIn)
-			qtyIn = zero
+			qtyIn.Set(&zero)
 		}
 
 		inventoryTransactions = append(inventoryTransactions, InventoryTransaction{
@@ -191,7 +193,7 @@ func CalcCost(transactions []InventoryTransaction, qty *big.Int) (cost int64, er
 		}
 	}
 
-	inQty, outQty := big.NewInt(0), big.NewInt(0)
+	inQty, outQty := new(big.Int).Set(&zero), new(big.Int).Set(&zero)
 	var price int64
 	var currentIn, currentOut InventoryTransaction
 	for {
@@ -229,6 +231,8 @@ func CalcCost(transactions []InventoryTransaction, qty *big.Int) (cost int64, er
 	}
 }
 
+var ErrEmptyQueue = errors.New("Empty Queue")
+
 type TransactionQueue []InventoryTransaction
 
 func (t *TransactionQueue) Enqueue(transaction InventoryTransaction) {
@@ -245,7 +249,7 @@ func (t *TransactionQueue) Enqueue(transaction InventoryTransaction) {
 func (t *TransactionQueue) Dequeue() (transaction InventoryTransaction, err error) {
 	tmp := *t
 	if len(tmp) < 1 {
-		err = errors.New("Empty Queue")
+		err = ErrEmptyQueue
 		return
 	}
 
@@ -256,7 +260,7 @@ func (t *TransactionQueue) Dequeue() (transaction InventoryTransaction, err erro
 
 func (t TransactionQueue) Peek() (transaction InventoryTransaction, err error) {
 	if len(t) < 1 {
-		err = errors.New("Empty Queue")
+		err = ErrEmptyQueue
 		return
 	}
 	transaction = t[len(t)-1]
