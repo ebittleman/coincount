@@ -8,7 +8,7 @@ import (
 
 var weiPerEth = int64(math.Pow(10, 18))
 
-func parseEtherFloatToWei(amount string) *big.Int {
+func ParseEtherFloatToWei(amount string) *big.Int {
 	parts := strings.Split(amount, ".")
 	weiStr := "0"
 	if len(parts) == 2 {

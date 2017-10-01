@@ -38,7 +38,9 @@ func main() {
 
 	// readPurchase(ctx, db, 1)
 
-	postPurchase(ctx, db, readPurchase(ctx, db, 2))
+	for i := 1; i <= 10; i++ {
+		postPurchase(ctx, db, readPurchase(ctx, db, i))
+	}
 }
 
 func readPurchase(ctx context.Context, db *sql.DB, id int) coincount.Purchase {
@@ -89,8 +91,8 @@ func postPurchase(ctx context.Context, db *sql.DB, purchase coincount.Purchase) 
 func insertPurchases(ctx context.Context, db *sql.DB) {
 	type call struct {
 		Date time.Time
-		Qty  float64
-		Cost float64
+		Qty  string
+		Cost int64
 	}
 
 	calls := make([]call, 0, 10)
@@ -107,7 +109,8 @@ func insertPurchases(ctx context.Context, db *sql.DB) {
 	}
 
 	for _, call := range calls {
-		purchase := coincount.MiningPayout(call.Date, call.Qty, call.Cost)
+		qty := coincount.ParseEtherFloatToWei(call.Qty)
+		purchase := coincount.MiningPayout(call.Date, qty, call.Cost)
 		table := coincount.PurchaseTable{
 			DB: db,
 		}

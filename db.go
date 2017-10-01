@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const inventoryBase = 32
+
 var SQLDbCreate = `
 BEGIN TRANSACTION;
 
@@ -273,7 +275,7 @@ func (p PurchaseItemTable) SaveItem(
 		purchaseID,
 		item.Item.ID,
 		item.InventoryAccount.ID,
-		item.Qty.Text(16),
+		item.Qty.Text(inventoryBase),
 		item.Cost,
 		item.Amount,
 	)
@@ -319,7 +321,7 @@ func (p PurchaseItemTable) GetItems(ctx context.Context, db *sql.DB, purchaseID 
 			&items[i].Amount,
 		)
 		items[i].Qty = big.NewInt(0)
-		items[i].Qty.SetString(qty, 16)
+		items[i].Qty.SetString(qty, inventoryBase)
 	}
 
 	rows.Close()
@@ -446,8 +448,8 @@ func (i InventoryTransactionTable) Save(ctx context.Context, transaction Invento
 		// transaction.ID, <- autoincrement
 		transaction.Account.ID,
 		transaction.Item.ID,
-		transaction.QtyIn.Text(16),
-		transaction.QtyOut.Text(16),
+		transaction.QtyIn.Text(inventoryBase),
+		transaction.QtyOut.Text(inventoryBase),
 		transaction.Cost,
 		transaction.Memo,
 		transaction.Date.UTC().Unix(),
@@ -502,8 +504,8 @@ func (i InventoryTransactionTable) Get(ctx context.Context, id int) (InventoryTr
 		&timestamp,
 	)
 
-	transaction.QtyIn, _ = big.NewInt(0).SetString(qtyIn, 16)
-	transaction.QtyOut, _ = big.NewInt(0).SetString(qtyIn, 16)
+	transaction.QtyIn, _ = big.NewInt(0).SetString(qtyIn, inventoryBase)
+	transaction.QtyOut, _ = big.NewInt(0).SetString(qtyIn, inventoryBase)
 
 	transaction.Date = time.Unix(timestamp, 0).UTC()
 

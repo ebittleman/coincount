@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Test_parseEtherFloatToWei(t *testing.T) {
+func Test_ParseEtherFloatToWei(t *testing.T) {
 	type args struct {
 		amount string
 	}
@@ -76,8 +76,8 @@ func Test_parseEtherFloatToWei(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseEtherFloatToWei(tt.args.amount); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseEtherFloatToWei() = %v, want %v", got, tt.want)
+			if got := ParseEtherFloatToWei(tt.args.amount); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseEtherFloatToWei() = %v, want %v", got, tt.want)
 			} else {
 				t.Log(got.String())
 			}

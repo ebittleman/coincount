@@ -24,48 +24,48 @@ func TestCalcCost(t *testing.T) {
 				transactions: []InventoryTransaction{
 					{
 						ID:     1,
-						QtyIn:  parseEtherFloatToWei(".2"),
+						QtyIn:  ParseEtherFloatToWei(".2"),
 						QtyOut: &zero,
 						Cost:   350,
 					},
 					{
 						ID:     2,
 						QtyIn:  &zero,
-						QtyOut: parseEtherFloatToWei(".1"),
+						QtyOut: ParseEtherFloatToWei(".1"),
 						Cost:   350,
 					},
 					{
 						ID:     3,
-						QtyIn:  parseEtherFloatToWei(".1"),
+						QtyIn:  ParseEtherFloatToWei(".1"),
 						QtyOut: &zero,
 						Cost:   300,
 					},
 					{
 						ID:     4,
-						QtyIn:  parseEtherFloatToWei("1"),
+						QtyIn:  ParseEtherFloatToWei("1"),
 						QtyOut: &zero,
 						Cost:   270,
 					},
 					{
 						ID:     5,
 						QtyIn:  &zero,
-						QtyOut: parseEtherFloatToWei(".3"),
+						QtyOut: ParseEtherFloatToWei(".3"),
 						Cost:   307,
 					},
 					{
 						ID:     6,
-						QtyIn:  parseEtherFloatToWei(".5"),
+						QtyIn:  ParseEtherFloatToWei(".5"),
 						QtyOut: &zero,
 						Cost:   390,
 					},
 					{
 						ID:     7,
-						QtyIn:  parseEtherFloatToWei("6"),
+						QtyIn:  ParseEtherFloatToWei("6"),
 						QtyOut: &zero,
 						Cost:   1,
 					},
 				},
-				qty: parseEtherFloatToWei("2.1"),
+				qty: ParseEtherFloatToWei("2.1"),
 			},
 			wantCost: 210,
 		},
@@ -85,7 +85,7 @@ func TestCalcCost(t *testing.T) {
 }
 
 func TestAmountCalc(t *testing.T) {
-	qty := parseEtherFloatToWei("0.01")
+	qty := ParseEtherFloatToWei("0.01")
 	costOfElectricity := int64(20015)
 	p := MiningPayout(time.Unix(123456789, 0), qty, costOfElectricity)
 	t.Log(p.Amount)
